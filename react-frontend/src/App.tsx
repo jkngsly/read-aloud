@@ -12,7 +12,7 @@ function App() {
 
   return (
     <>
-      <div>
+      <div className="flex">
         <h2>Article Read-Aloud</h2>
         <input
           type="text"
