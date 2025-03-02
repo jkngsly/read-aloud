@@ -1,22 +1,30 @@
 
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { setArticles, setSelectedArticle, setCurrentChunkIndex } from './store/articlesSlice';
-import axiosInstance from './axiosInstance'; // Import the configured axios instance
-import { RootState } from './store';
+import React from 'react';
+import { useDispatch } from 'react-redux';
+import { setCurrentChunkIndex } from './store/articlesSlice';
+
 
 // Define an interface for the props
 interface MyComponentProps {
-    text: string;
+    chunk: {
+        text: string,
+        index: number
+    };
     active: boolean;
   }
   
 // Functional component with typed props
-const Chunk: React.FC<MyComponentProps> = ({ text, active }) => {
+const Chunk: React.FC<MyComponentProps> = ({ chunk, active }) => {
+
+    const dispatch = useDispatch();
+
+    const handleOnClick = () => { 
+        dispatch(setCurrentChunkIndex(chunk.index));
+    }
 
     return (
-        <div className={ active ? "mb-4 text-yellow-200" : "mb-4"}>
-            <p>{text}</p>
+        <div className={ active ? "mb-4 text-yellow-200" : "mb-4"} onClick={handleOnClick}>
+            <p>{chunk.text}</p>
         </div>
     )
 }

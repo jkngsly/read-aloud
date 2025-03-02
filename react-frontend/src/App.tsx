@@ -39,7 +39,7 @@ const App = () => {
       const fetchAudio = async () => {
         try {
           const response = await axiosInstance.get(`/get-audio?path=${encodeURIComponent(currentChunk.audio_path)}`, {
-            responseType: 'blob', // Make sure to get the file as a blob
+            responseType: 'blob', 
           });
 
           // Convert the blob into an object URL
@@ -110,7 +110,7 @@ const App = () => {
 
             <div className="overflow-y-scroll h-96"> 
                 {selectedArticle.chunks.map((chunk: any, index: number) => {
-                return <Chunk text={chunk.text} active={currentChunkIndex === index} key={index} />;
+                return <Chunk chunk={{...chunk, index: index}} active={currentChunkIndex === index} key={index} />;
                 })}
             </div>
             
