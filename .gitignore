@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 # Python 
-.venv/
+venv
 articles
