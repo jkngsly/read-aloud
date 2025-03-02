@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setArticles, setSelectedArticle, setCurrentChunkIndex } from './store/articlesSlice';
 import axiosInstance from './axiosInstance'; // Import the configured axios instance
 import { RootState } from './store';
+import Chunk from './Chunk.tsx';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -73,10 +74,13 @@ const App = () => {
         {selectedArticle ? (
           <>
             <h2 className="text-xl font-semibold mb-4">{selectedArticle.title}</h2>
-            <div className="mb-4">
-              <p>{currentChunk?.text}</p>
-            </div>
 
+            <div className="overflow-y-scroll h-96"> 
+                {selectedArticle.chunks.map((chunk: any, index: number) => {
+                return <Chunk text={chunk.text} active={currentChunkIndex === index} key={index} />;
+                })}
+            </div>
+            
             {/* Audio Player */}
             <div className="flex items-center">
               <button
