@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response, jsonify, send_file
 from flask_cors import CORS
 from newspaper import Article
 import os, io, pyttsx3, json, spacy
@@ -41,7 +41,7 @@ def generate_article_json(json_data):
 
     return json_file_path  # Optional: Return the path of the JSON file
 
-def split_text_smart(text):
+def split_text(text):
     """Uses NLP to split text into meaningful paragraphs."""
     doc = nlp(text)
     chunks = []
@@ -108,6 +108,87 @@ def get_folder_name(title):
 
     return title
 
+@app.route('/get-articles', methods=['GET'])
+def get_articles():
+    """API endpoint that returns an array of articles with title and path."""
+    try:
+        # Path to the articles directory
+        articles_dir = "articles"
+        
+        # List to hold article data with title and path
+        articles = []
+        
+        # Loop through each folder in the articles directory
+        for folder in os.listdir(articles_dir):
+            folder_path = os.path.join(articles_dir, folder)
+            
+            # Check if it's a directory
+            if os.path.isdir(folder_path):
+                metadata_path = os.path.join(folder_path, "metadata.json")
+                
+                # Check if the metadata file exists
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, "r", encoding="utf-8") as json_file:
+                        metadata = json.load(json_file)
+                        # Collect title and path (folder name)
+                        articles.append({
+                            "title": metadata.get("title"),
+                            "path": folder  # Folder name as the path
+                        })
+        
+        return jsonify({"articles": articles})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/get-article-metadata', methods=['GET'])
+def get():
+    """API endpoint that returns the metadata file for the requested article."""
+    path = request.args.get("path")
+    if not path:
+        return jsonify({"error": "Missing path parameter"}), 400
+
+    try:
+        # Generate folder name based on the path
+        folder_name = get_folder_name(path)
+        
+        # Path to the metadata JSON file
+        metadata_path = f"articles/{folder_name}/metadata.json"
+        
+        # Check if the metadata file exists
+        if os.path.exists(metadata_path):
+            return send_file(metadata_path, as_attachment=True)  # Send the file as an attachment
+        else:
+            return jsonify({"error": "Metadata file not found"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/get-audio', methods=['GET'])
+def get_audio():
+    """API endpoint that serves the audio file for a specific chunk."""
+    title = request.args.get("title")
+    chunk_index = request.args.get("chunk_index", type=int)  # Specify the chunk index (e.g., 0, 1, 2...)
+    
+    if not title or chunk_index is None:
+        return jsonify({"error": "Missing title or chunk_index parameter"}), 400
+
+    try:
+        # Generate folder name based on the title
+        folder_name = get_folder_name(title)
+        
+        # Path to the audio file based on the chunk index
+        audio_path = f"articles/{folder_name}/audio_files/{chunk_index}.mp3"
+        
+        # Check if the audio file exists
+        if os.path.exists(audio_path):
+            return send_file(audio_path, mimetype='audio/mpeg')  # Send the audio file as a response
+        else:
+            return jsonify({"error": "Audio file not found"}), 404
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/generate', methods=['GET'])
 def generate():
     """API endpoint that extracts article text and streams speech."""
@@ -127,57 +208,6 @@ def get_article(url):
 
     return article
 
-####
-#### Ahoy! DEPRECATED CODE AHEAD
-####
-
-
-@app.route('/read-aloud', methods=['GET'])
-def read_aloud():
-    """API endpoint that extracts article text and streams speech."""
-    url = request.args.get("url")
-    if not url:
-        return jsonify({"error": "Missing URL parameter"}), 400
-
-    try:
-        text = extract_article_content(url)
-        return generate_speech_stream(text)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-
-def extract_article_content(url):
-    """Extracts and cleans main article content from a webpage"""
-    article = Article(url)
-    article.download()
-    article.parse()
-
-    return article.text
-
-def generate_speech_stream(text):
-    """Converts extracted text to speech and saves as an MP3 file."""
-    try:
-        engine = pyttsx3.init()
-        mp3_fp = io.BytesIO()
-
-        def on_word(name, location, length):
-            pass  # Optional: Handle word tracking if needed
-
-        engine.connect('started-word', on_word)
-        engine.save_to_file(text, 'output.mp3')
-        engine.runAndWait()
-
-        with open("output.mp3", "rb") as f:
-            mp3_fp.write(f.read())
-
-        mp3_fp.seek(0)
-        return Response(mp3_fp.read(), mimetype="audio/mpeg")
-
-    except Exception as e:
-        print(f"Error generating speech: {e}")
-        return jsonify({"error": "Failed to generate speech"}), 500
-    
 
