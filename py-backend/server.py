@@ -1,9 +1,9 @@
+import re
+import unicodedata
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from newspaper import Article
-import pyttsx3
-import os
-import io
+import os, io, pyttsx3, json
 
 app = Flask(__name__)
 CORS(app) # Allow cross-origin requests from React
@@ -22,11 +22,10 @@ def convert(url):
     }
 
     # Create the directories
-    os.mkdir(f"articles/{folder_name}")
-    os.mkdir(f"articles/{folder_name}/audio_files")
+    os.makedirs(f"articles/{folder_name}/audio_files", exist_ok=True)
 
     # Generate audio chunks
-    json_data["chunks"] = generate_audio_chunks(split_text(article.text))
+    json_data["chunks"] = generate_audio_chunks(split_text(article.text), folder_name)
 
     # Write JSON object to a file
     generate_article_json(json_data)
@@ -35,7 +34,7 @@ def convert(url):
         
 def generate_article_json(json_data):
     # Write JSON object to a file
-    json_file_path = f"{json_data["path"]}/metadata.json"
+    json_file_path = f"articles/{json_data['path']}/metadata.json"
     with open(json_file_path, "w", encoding="utf-8") as json_file:
         json.dump(json_data, json_file, indent=4, ensure_ascii=False)  # Pretty print JSON
 
@@ -46,14 +45,14 @@ def split_text(text):
     paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
     return paragraphs
 
-def generate_audio_chunks(text_chunks):
+def generate_audio_chunks(text_chunks, folder_name):
     """
     Creates audio for each text chunk and builds a corresponding JSON array
     """
     engine = pyttsx3.init()
     chunks = []
     for index, chunk in enumerate(text_chunks):
-            audio_path = f"path/audio/{index}.mp3"
+            audio_path = f"articles/{folder_name}/audio_files/{index}.mp3"
             chunks.append({
                 "text": chunk,
                 "audio_path": audio_path
@@ -108,6 +107,18 @@ def generate():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def get_article(url):
+    article = Article(url)
+    article.download()
+    article.parse()
+
+    return article
+
+####
+#### Ahoy! DEPRECATED CODE AHEAD
+####
+
+
 @app.route('/read-aloud', methods=['GET'])
 def read_aloud():
     """API endpoint that extracts article text and streams speech."""
@@ -124,17 +135,6 @@ def read_aloud():
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
 
-
-####
-#### Ahoy! DEPRECATED CODE AHEAD
-####
-
-def get_article(url):
-    article = Article(url)
-    article.download()
-    article.parse()
-
-    return article
 
 def extract_article_content(url):
     """Extracts and cleans main article content from a webpage"""
