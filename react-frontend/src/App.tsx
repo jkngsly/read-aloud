@@ -1,9 +1,10 @@
 // src/App.tsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setArticles, setSelectedArticle, setCurrentChunkIndex } from './store/articlesSlice';
 import axiosInstance from './axiosInstance'; // Import the configured axios instance
+// @ts-ignore
 import { RootState } from './store';
 import Chunk from './Chunk.tsx';
 
@@ -13,6 +14,8 @@ const App = () => {
     (state: RootState) => state.articles
   );
 
+  const audioRef = useRef<HTMLAudioElement>(null)
+  
   useEffect(() => {
     // Fetch articles list using axiosInstance
     const fetchArticles = async () => {
@@ -26,6 +29,36 @@ const App = () => {
 
     fetchArticles();
   }, [dispatch]);
+
+  useEffect(() => {
+    // When the current chunk changes, update the audio source and play it
+    if (selectedArticle && currentChunkIndex >= 0) {
+      const currentChunk = selectedArticle.chunks[currentChunkIndex];
+
+      // Make API request to get the MP3 URL
+      const fetchAudio = async () => {
+        try {
+          const response = await axiosInstance.get(`/get-audio?path=${encodeURIComponent(currentChunk.audio_path)}`, {
+            responseType: 'blob', // Make sure to get the file as a blob
+          });
+
+          // Convert the blob into an object URL
+          const objectUrl = URL.createObjectURL(response.data);
+        
+          if (audioRef.current) {
+      
+            // Assuming the response contains a valid URL
+            audioRef.current.src = objectUrl;
+            audioRef.current.play();
+          }
+        } catch (error) {
+          console.error('Error fetching audio file:', error);
+        }
+      };
+
+      fetchAudio();
+    }
+  }, [currentChunkIndex, selectedArticle]);
 
   const handleArticleClick = async (path: string) => {
     // Fetch article metadata using axiosInstance
@@ -57,7 +90,7 @@ const App = () => {
       <div className="w-1/3 mr-6">
         <h2 className="text-2xl font-semibold mb-4">Articles</h2>
         <ul className="space-y-4">
-          {articles.map((article) => (
+          {articles.map((article: any) => (
             <li
               key={article.path}
               className="cursor-pointer hover:text-blue-500"
@@ -90,7 +123,7 @@ const App = () => {
                 Prev
               </button>
 
-              <audio controls>
+              <audio ref={audioRef} controls>
                 <source
                   src={`/${currentChunk?.audio_path}`}
                   type="audio/mpeg"

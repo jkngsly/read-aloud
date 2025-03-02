@@ -167,22 +167,13 @@ def get():
 @app.route('/get-audio', methods=['GET'])
 def get_audio():
     """API endpoint that serves the audio file for a specific chunk."""
-    title = request.args.get("title")
-    chunk_index = request.args.get("chunk_index", type=int)  # Specify the chunk index (e.g., 0, 1, 2...)
+    path = request.args.get("path")
+    print(path)
     
-    if not title or chunk_index is None:
-        return jsonify({"error": "Missing title or chunk_index parameter"}), 400
-
     try:
-        # Generate folder name based on the title
-        folder_name = get_folder_name(title)
-        
-        # Path to the audio file based on the chunk index
-        audio_path = f"articles/{folder_name}/audio_files/{chunk_index}.mp3"
-        
         # Check if the audio file exists
-        if os.path.exists(audio_path):
-            return send_file(audio_path, mimetype='audio/mpeg')  # Send the audio file as a response
+        if os.path.exists(path):
+            return send_file(path, mimetype='audio/mpeg')  # Send the audio file as a response
         else:
             return jsonify({"error": "Audio file not found"}), 404
     
