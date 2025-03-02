@@ -3,10 +3,11 @@ import unicodedata
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from newspaper import Article
-import os, io, pyttsx3, json
+import os, io, pyttsx3, json, spacy
 
 app = Flask(__name__)
 CORS(app) # Allow cross-origin requests from React
+nlp = spacy.load("en_core_web_sm")
 
 def convert(url):
     article = get_article(url)
@@ -40,10 +41,22 @@ def generate_article_json(json_data):
 
     return json_file_path  # Optional: Return the path of the JSON file
 
-def split_text(text):
-    """Splits text into paragraphs based on newlines."""
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
-    return paragraphs
+def split_text_smart(text):
+    """Uses NLP to split text into meaningful paragraphs."""
+    doc = nlp(text)
+    chunks = []
+    chunk = []
+
+    for sentence in doc.sents:  # Iterate over detected sentences
+        chunk.append(sentence.text)
+        if len(chunk) >= 3:  # Group into meaningful chunks
+            chunks.append(" ".join(chunk))
+            chunk = []
+
+    if chunk:
+        chunks.append(" ".join(chunk))
+
+    return chunks
 
 def generate_audio_chunks(text_chunks, folder_name):
     """
