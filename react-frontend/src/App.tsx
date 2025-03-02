@@ -15,7 +15,7 @@ const App = () => {
   );
 
   const audioRef = useRef<HTMLAudioElement>(null)
-  
+
   useEffect(() => {
     // Fetch articles list using axiosInstance
     const fetchArticles = async () => {
@@ -123,7 +123,7 @@ const App = () => {
                 Prev
               </button>
 
-              <audio ref={audioRef} controls>
+              <audio ref={audioRef} controls onEnded={handleNextChunk}>
                 <source
                   src={`/${currentChunk?.audio_path}`}
                   type="audio/mpeg"
