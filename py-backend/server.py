@@ -8,13 +8,9 @@ import io
 app = Flask(__name__)
 CORS(app) # Allow cross-origin requests from React
 
-def generate(url):
+def convert(url):
     article = get_article(url)
-    json = parse(url, article)
-    
-
-def parse(url, article):
-    folder_name = get_folder_name(json["title"])
+    folder_name = get_folder_name(article.title)
 
     # Define JSON object
     json_data = { 
@@ -33,13 +29,13 @@ def parse(url, article):
     json_data["chunks"] = generate_audio_chunks(split_text(article.text))
 
     # Write JSON object to a file
-    write_json(json_data)
+    generate_article_json(json_data)
 
     return json_data
         
-def write_json(json):
+def generate_article_json(json_data):
     # Write JSON object to a file
-    json_file_path = f"{json["path"]}/metadata.json"
+    json_file_path = f"{json_data["path"]}/metadata.json"
     with open(json_file_path, "w", encoding="utf-8") as json_file:
         json.dump(json_data, json_file, indent=4, ensure_ascii=False)  # Pretty print JSON
 
@@ -66,12 +62,6 @@ def generate_audio_chunks(text_chunks):
             engine.runAndWait()
     
     return chunks
-
-def generate_article_json(json): 
-    json_file_path = f"{path}/metadata.json"
-    with open(json_file_path, "w", encoding="utf-8") as json_file:
-        json.dump(json_data, json_file, indent=4, ensure_ascii=False)  # Pretty print JSON
-
 
 def get_folder_name(title): 
     """
@@ -105,6 +95,18 @@ def get_folder_name(title):
     title = title[:255]
 
     return title
+
+@app.route('/generate', methods=['GET'])
+def generate():
+    """API endpoint that extracts article text and streams speech."""
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "Missing URL parameter"}), 400
+
+    try:
+        return convert(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/read-aloud', methods=['GET'])
 def read_aloud():
